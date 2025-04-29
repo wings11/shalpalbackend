@@ -1,0 +1,348 @@
+PGDMP  &    2    
+            }         
+   shalpalres    16.8    16.8 F    Q           0    0    ENCODING    ENCODING        SET client_encoding = 'UTF8';
+                      false            R           0    0 
+   STDSTRINGS 
+   STDSTRINGS     (   SET standard_conforming_strings = 'on';
+                      false            S           0    0 
+   SEARCHPATH 
+   SEARCHPATH     8   SELECT pg_catalog.set_config('search_path', '', false);
+                      false            T           1262    24660 
+   shalpalres    DATABASE     p   CREATE DATABASE shalpalres WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en-US';
+    DROP DATABASE shalpalres;
+                postgres    false                        2615    2200    public    SCHEMA        CREATE SCHEMA public;
+    DROP SCHEMA public;
+                pg_database_owner    false            U           0    0 
+   SCHEMA public     COMMENT     6   COMMENT ON SCHEMA public IS 'standard public schema';
+                   pg_database_owner    false    4                         1255    33113    sync_orders_to_history()    FUNCTION       CREATE FUNCTION public.sync_orders_to_history() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  INSERT INTO orderhistory (
+    id, table_id, items, notes, status, created_at,
+    order_type, staff_name, payment_method, completed_at
+  )
+  VALUES (
+    NEW.id, NEW.table_id, NEW.items, NEW.notes, NEW.status, NEW.created_at,
+    NEW.order_type, NEW.staff_name, NEW.payment_method, NEW.completed_at
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    table_id = EXCLUDED.table_id,
+    items = EXCLUDED.items,
+    notes = EXCLUDED.notes,
+    status = EXCLUDED.status,
+    created_at = EXCLUDED.created_at,
+    order_type = EXCLUDED.order_type,
+    staff_name = EXCLUDED.staff_name,
+    payment_method = EXCLUDED.payment_method,
+    completed_at = EXCLUDED.completed_at;
+  RETURN NEW;
+END;
+$$;
+ /   DROP FUNCTION public.sync_orders_to_history();
+       public          postgres    false    4                         1259    33084     charges    TABLE         CREATE TABLE public.charges (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    rate double precision NOT NULL,
+    enabled boolean DEFAULT true
+);
+    DROP TABLE public.charges;
+       public         heap    postgres    false    4                         1259    33083    charges_id_seq    SEQUENCE         CREATE SEQUENCE public.charges_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ %   DROP SEQUENCE public.charges_id_seq;
+       public          postgres    false    4    233            V           0    0    charges_id_seq    SEQUENCE OWNED BY     A   ALTER SEQUENCE public.charges_id_seq OWNED BY public.charges.id;
+          public          postgres    false    232                         1259    33092 	   discounts    TABLE         CREATE TABLE public.discounts (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    rate double precision NOT NULL,
+    enabled boolean DEFAULT true
+);
+    DROP TABLE public.discounts;
+       public         heap    postgres    false    4                         1259    33091    discounts_id_seq    SEQUENCE         CREATE SEQUENCE public.discounts_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ '   DROP SEQUENCE public.discounts_id_seq;
+       public          postgres    false    235    4            W           0    0    discounts_id_seq    SEQUENCE OWNED BY     E   ALTER SEQUENCE public.discounts_id_seq OWNED BY public.discounts.id;
+          public          postgres    false    234                         1259    33054 	   employees    TABLE        CREATE TABLE public.employees (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    employee_id character varying(50) NOT NULL,
+    "position" character varying(100),
+    shift character varying(100),
+    email character varying(255),
+    phone character varying(20),
+    pin_code character varying(20),
+    status character varying(20),
+    start_date date,
+    date_of_birth date,
+    id_card_number character varying(50),
+    gender character varying(20),
+    profile_image text
+);
+    DROP TABLE public.employees;
+       public         heap    postgres    false    4                         1259    33053    employees_id_seq    SEQUENCE         CREATE SEQUENCE public.employees_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ '   DROP SEQUENCE public.employees_id_seq;
+       public          postgres    false    4    227            X           0    0    employees_id_seq    SEQUENCE OWNED BY     E   ALTER SEQUENCE public.employees_id_seq OWNED BY public.employees.id;
+          public          postgres    false    226                         1259    32939    meat_options    TABLE         CREATE TABLE public.meat_options (
+    id integer NOT NULL,
+    name character varying(50) NOT NULL,
+    price_adjustment numeric(10,2) DEFAULT 0.00
+);
+     DROP TABLE public.meat_options;
+       public         heap    postgres    false    4                         1259    32938    meat_options_id_seq    SEQUENCE         CREATE SEQUENCE public.meat_options_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ *   DROP SEQUENCE public.meat_options_id_seq;
+       public          postgres    false    218    4            Y           0    0    meat_options_id_seq    SEQUENCE OWNED BY     K   ALTER SEQUENCE public.meat_options_id_seq OWNED BY public.meat_options.id;
+          public          postgres    false    217                         1259    32947    menu_item_meat_options    TABLE     w   CREATE TABLE public.menu_item_meat_options (
+    menu_item_id integer NOT NULL,
+    meat_option_id integer NOT NULL
+);
+ *   DROP TABLE public.menu_item_meat_options;
+       public         heap    postgres    false    4                         1259    32991 
+   menu_items    TABLE       CREATE TABLE public.menu_items (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    price numeric(10,2) NOT NULL,
+    description text,
+    category character varying(50),
+    image character varying(255) DEFAULT ''::character varying
+);
+    DROP TABLE public.menu_items;
+       public         heap    postgres    false    4                         1259    32990    menu_items_id_seq    SEQUENCE         CREATE SEQUENCE public.menu_items_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ (   DROP SEQUENCE public.menu_items_id_seq;
+       public          postgres    false    4    221            Z           0    0    menu_items_id_seq    SEQUENCE OWNED BY     G   ALTER SEQUENCE public.menu_items_id_seq OWNED BY public.menu_items.id;
+          public          postgres    false    220                         1259    33099    orderhistory    TABLE        CREATE TABLE public.orderhistory (
+    id integer NOT NULL,
+    table_id integer NOT NULL,
+    items jsonb NOT NULL,
+    notes text,
+    status character varying(20),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    order_type character varying(50),
+    staff_name character varying(255),
+    payment_method character varying(100),
+    completed_at timestamp without time zone
+);
+     DROP TABLE public.orderhistory;
+       public         heap    postgres    false    4                         1259    33011    orders    TABLE        CREATE TABLE public.orders (
+    id integer NOT NULL,
+    table_id integer NOT NULL,
+    items jsonb NOT NULL,
+    notes text,
+    status character varying(20),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    order_type character varying(50),
+    staff_name character varying(255),
+    payment_method character varying(100),
+    completed_at timestamp without time zone
+);
+    DROP TABLE public.orders;
+       public         heap    postgres    false    4                         1259    33010 
+   orders_id_seq    SEQUENCE         CREATE SEQUENCE public.orders_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ $   DROP SEQUENCE public.orders_id_seq;
+       public          postgres    false    225    4            [           0    0 
+   orders_id_seq    SEQUENCE OWNED BY     ?   ALTER SEQUENCE public.orders_id_seq OWNED BY public.orders.id;
+          public          postgres    false    224                         1259    33065    payment_options    TABLE         CREATE TABLE public.payment_options (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    enabled boolean DEFAULT true,
+    show_image_in_invoice boolean DEFAULT false,
+    image text
+);
+ #   DROP TABLE public.payment_options;
+       public         heap    postgres    false    4                         1259    33064    payment_options_id_seq    SEQUENCE         CREATE SEQUENCE public.payment_options_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ -   DROP SEQUENCE public.payment_options_id_seq;
+       public          postgres    false    229    4            \           0    0    payment_options_id_seq    SEQUENCE OWNED BY     Q   ALTER SEQUENCE public.payment_options_id_seq OWNED BY public.payment_options.id;
+          public          postgres    false    228                         1259    33000    tables    TABLE         CREATE TABLE public.tables (
+    id integer NOT NULL,
+    table_number character varying(10) NOT NULL,
+    qr_token character varying(36)
+);
+    DROP TABLE public.tables;
+       public         heap    postgres    false    4                         1259    32999 
+   tables_id_seq    SEQUENCE         CREATE SEQUENCE public.tables_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ $   DROP SEQUENCE public.tables_id_seq;
+       public          postgres    false    223    4            ]           0    0 
+   tables_id_seq    SEQUENCE OWNED BY     ?   ALTER SEQUENCE public.tables_id_seq OWNED BY public.tables.id;
+          public          postgres    false    222                         1259    33076    taxes    TABLE         CREATE TABLE public.taxes (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    rate double precision NOT NULL,
+    enabled boolean DEFAULT true
+);
+    DROP TABLE public.taxes;
+       public         heap    postgres    false    4                         1259    33075    taxes_id_seq    SEQUENCE         CREATE SEQUENCE public.taxes_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ #   DROP SEQUENCE public.taxes_id_seq;
+       public          postgres    false    231    4            ^           0    0    taxes_id_seq    SEQUENCE OWNED BY     =   ALTER SEQUENCE public.taxes_id_seq OWNED BY public.taxes.id;
+          public          postgres    false    230                         1259    24708    users    TABLE     a  CREATE TABLE public.users (
+    id integer NOT NULL,
+    username character varying(50) NOT NULL,
+    password character varying(255) NOT NULL,
+    role character varying(20) NOT NULL,
+    CONSTRAINT users_role_check CHECK (((role)::text = ANY ((ARRAY['admin'::character varying, 'manager'::character varying, 'staff'::character varying])::text[])))
+);
+    DROP TABLE public.users;
+       public         heap    postgres    false    4                         1259    24707    users_id_seq    SEQUENCE         CREATE SEQUENCE public.users_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ #   DROP SEQUENCE public.users_id_seq;
+       public          postgres    false    216    4            _           0    0    users_id_seq    SEQUENCE OWNED BY     =   ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+          public          postgres    false    215                        2604    33087 
+   charges id     DEFAULT     h   ALTER TABLE ONLY public.charges ALTER COLUMN id SET DEFAULT nextval('public.charges_id_seq'::regclass);
+ 9   ALTER TABLE public.charges ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    233    232    233                        2604    33095    discounts id     DEFAULT     l   ALTER TABLE ONLY public.discounts ALTER COLUMN id SET DEFAULT nextval('public.discounts_id_seq'::regclass);
+ ;   ALTER TABLE public.discounts ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    234    235    235                        2604    33057    employees id     DEFAULT     l   ALTER TABLE ONLY public.employees ALTER COLUMN id SET DEFAULT nextval('public.employees_id_seq'::regclass);
+ ;   ALTER TABLE public.employees ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    226    227    227                        2604    32942    meat_options id     DEFAULT     r   ALTER TABLE ONLY public.meat_options ALTER COLUMN id SET DEFAULT nextval('public.meat_options_id_seq'::regclass);
+ >   ALTER TABLE public.meat_options ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    218    217    218                        2604    32994 
+   menu_items id     DEFAULT     n   ALTER TABLE ONLY public.menu_items ALTER COLUMN id SET DEFAULT nextval('public.menu_items_id_seq'::regclass);
+ <   ALTER TABLE public.menu_items ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    220    221    221                        2604    33014 	   orders id     DEFAULT     f   ALTER TABLE ONLY public.orders ALTER COLUMN id SET DEFAULT nextval('public.orders_id_seq'::regclass);
+ 8   ALTER TABLE public.orders ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    225    224    225                        2604    33068    payment_options id     DEFAULT     x   ALTER TABLE ONLY public.payment_options ALTER COLUMN id SET DEFAULT nextval('public.payment_options_id_seq'::regclass);
+ A   ALTER TABLE public.payment_options ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    228    229    229                        2604    33003 	   tables id     DEFAULT     f   ALTER TABLE ONLY public.tables ALTER COLUMN id SET DEFAULT nextval('public.tables_id_seq'::regclass);
+ 8   ALTER TABLE public.tables ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    223    222    223                        2604    33079    taxes id     DEFAULT     d   ALTER TABLE ONLY public.taxes ALTER COLUMN id SET DEFAULT nextval('public.taxes_id_seq'::regclass);
+ 7   ALTER TABLE public.taxes ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    231    230    231                        2604    24711    users id     DEFAULT     d   ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+ 7   ALTER TABLE public.users ALTER COLUMN id DROP DEFAULT;
+       public          postgres    false    215    216    216                        2606    33090    charges charges_pkey 
+   CONSTRAINT     R   ALTER TABLE ONLY public.charges
+    ADD CONSTRAINT charges_pkey PRIMARY KEY (id);
+ >   ALTER TABLE ONLY public.charges DROP CONSTRAINT charges_pkey;
+       public            postgres    false    233                        2606    33098    discounts discounts_pkey 
+   CONSTRAINT     V   ALTER TABLE ONLY public.discounts
+    ADD CONSTRAINT discounts_pkey PRIMARY KEY (id);
+ B   ALTER TABLE ONLY public.discounts DROP CONSTRAINT discounts_pkey;
+       public            postgres    false    235                        2606    33063 #   employees employees_employee_id_key 
+   CONSTRAINT     e   ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_employee_id_key UNIQUE (employee_id);
+ M   ALTER TABLE ONLY public.employees DROP CONSTRAINT employees_employee_id_key;
+       public            postgres    false    227                        2606    33061    employees employees_pkey 
+   CONSTRAINT     V   ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_pkey PRIMARY KEY (id);
+ B   ALTER TABLE ONLY public.employees DROP CONSTRAINT employees_pkey;
+       public            postgres    false    227                        2606    32946 "   meat_options meat_options_name_key 
+   CONSTRAINT     ]   ALTER TABLE ONLY public.meat_options
+    ADD CONSTRAINT meat_options_name_key UNIQUE (name);
+ L   ALTER TABLE ONLY public.meat_options DROP CONSTRAINT meat_options_name_key;
+       public            postgres    false    218                        2606    32944    meat_options meat_options_pkey 
+   CONSTRAINT     \   ALTER TABLE ONLY public.meat_options
+    ADD CONSTRAINT meat_options_pkey PRIMARY KEY (id);
+ H   ALTER TABLE ONLY public.meat_options DROP CONSTRAINT meat_options_pkey;
+       public            postgres    false    218                        2606    32951 2   menu_item_meat_options menu_item_meat_options_pkey 
+   CONSTRAINT         ALTER TABLE ONLY public.menu_item_meat_options
+    ADD CONSTRAINT menu_item_meat_options_pkey PRIMARY KEY (menu_item_id, meat_option_id);
+ \   ALTER TABLE ONLY public.menu_item_meat_options DROP CONSTRAINT menu_item_meat_options_pkey;
+       public            postgres    false    219    219                        2606    32998    menu_items menu_items_pkey 
+   CONSTRAINT     X   ALTER TABLE ONLY public.menu_items
+    ADD CONSTRAINT menu_items_pkey PRIMARY KEY (id);
+ D   ALTER TABLE ONLY public.menu_items DROP CONSTRAINT menu_items_pkey;
+       public            postgres    false    221                        2606    33106    orderhistory orderhistory_pkey 
+   CONSTRAINT     \   ALTER TABLE ONLY public.orderhistory
+    ADD CONSTRAINT orderhistory_pkey PRIMARY KEY (id);
+ H   ALTER TABLE ONLY public.orderhistory DROP CONSTRAINT orderhistory_pkey;
+       public            postgres    false    236                        2606    33020    orders orders_pkey 
+   CONSTRAINT     P   ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
+ <   ALTER TABLE ONLY public.orders DROP CONSTRAINT orders_pkey;
+       public            postgres    false    225                        2606    33074 $   payment_options payment_options_pkey 
+   CONSTRAINT     b   ALTER TABLE ONLY public.payment_options
+    ADD CONSTRAINT payment_options_pkey PRIMARY KEY (id);
+ N   ALTER TABLE ONLY public.payment_options DROP CONSTRAINT payment_options_pkey;
+       public            postgres    false    229                        2606    33005    tables tables_pkey 
+   CONSTRAINT     P   ALTER TABLE ONLY public.tables
+    ADD CONSTRAINT tables_pkey PRIMARY KEY (id);
+ <   ALTER TABLE ONLY public.tables DROP CONSTRAINT tables_pkey;
+       public            postgres    false    223                        2606    33009    tables tables_qr_token_key 
+   CONSTRAINT     Y   ALTER TABLE ONLY public.tables
+    ADD CONSTRAINT tables_qr_token_key UNIQUE (qr_token);
+ D   ALTER TABLE ONLY public.tables DROP CONSTRAINT tables_qr_token_key;
+       public            postgres    false    223                        2606    33007    tables tables_table_number_key 
+   CONSTRAINT     a   ALTER TABLE ONLY public.tables
+    ADD CONSTRAINT tables_table_number_key UNIQUE (table_number);
+ H   ALTER TABLE ONLY public.tables DROP CONSTRAINT tables_table_number_key;
+       public            postgres    false    223                        2606    33082    taxes taxes_pkey 
+   CONSTRAINT     N   ALTER TABLE ONLY public.taxes
+    ADD CONSTRAINT taxes_pkey PRIMARY KEY (id);
+ :   ALTER TABLE ONLY public.taxes DROP CONSTRAINT taxes_pkey;
+       public            postgres    false    231                        2606    24714    users users_pkey 
+   CONSTRAINT     N   ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+ :   ALTER TABLE ONLY public.users DROP CONSTRAINT users_pkey;
+       public            postgres    false    216                        2606    24716    users users_username_key 
+   CONSTRAINT     W   ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+ B   ALTER TABLE ONLY public.users DROP CONSTRAINT users_username_key;
+       public            postgres    false    216                        2620    33117    orders orders_sync_trigger     TRIGGER         CREATE TRIGGER orders_sync_trigger AFTER INSERT OR UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.sync_orders_to_history();
+ 3   DROP TRIGGER orders_sync_trigger ON public.orders;
+       public          postgres    false    225    237                        2606    32957 A   menu_item_meat_options menu_item_meat_options_meat_option_id_fkey 
+   FK CONSTRAINT         ALTER TABLE ONLY public.menu_item_meat_options
+    ADD CONSTRAINT menu_item_meat_options_meat_option_id_fkey FOREIGN KEY (meat_option_id) REFERENCES public.meat_options(id);
+ k   ALTER TABLE ONLY public.menu_item_meat_options DROP CONSTRAINT menu_item_meat_options_meat_option_id_fkey;
+       public          postgres    false    4769    218    219                        2606    33107 '   orderhistory orderhistory_table_id_fkey 
+   FK CONSTRAINT         ALTER TABLE ONLY public.orderhistory
+    ADD CONSTRAINT orderhistory_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id);
+ Q   ALTER TABLE ONLY public.orderhistory DROP CONSTRAINT orderhistory_table_id_fkey;
+       public          postgres    false    223    4775    236                        2606    33021    orders orders_table_id_fkey 
+   FK CONSTRAINT     |   ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id);
+ E   ALTER TABLE ONLY public.orders DROP CONSTRAINT orders_table_id_fkey;
+       public          postgres    false    4775    225    223           
