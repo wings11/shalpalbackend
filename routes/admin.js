@@ -183,7 +183,7 @@ router.get('/qr/:tableNumber', async (req, res) => {
     } else {
       qr_token = tableResult.rows[0].qr_token;
     }
-    const qrUrl = `http://localhost:5173/?table=${tableNumber}&token=${qr_token}`;
+    const qrUrl = `https://shalpal.netlify.app/?table=${tableNumber}&token=${qr_token}`;
     const qrCodeImage = await QRCode.toDataURL(qrUrl);
     console.log(`Generated QR code for table ${tableNumber}: ${qrUrl}`);
     res.json({ qrCodeImage });
