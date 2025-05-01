@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const helmet = require('helmet');
 const app = express();
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/admin');
@@ -9,6 +10,7 @@ const customerRoutes = require('./routes/customer');
 const path = require('path');
 
 app.use(cors());
+app.use(helmet());
 app.use(express.json());
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
