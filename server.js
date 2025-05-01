@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 const app = express();
+const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/admin');
 const customerRoutes = require('./routes/customer');
 const path = require('path');
@@ -20,6 +21,7 @@ const pool = new Pool({
     }
   });
   
+app.use('/api/auth', authRoutes); 
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/Uploads', express.static(path.join(__dirname, 'Uploads')));

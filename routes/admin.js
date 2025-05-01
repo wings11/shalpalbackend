@@ -5,6 +5,7 @@ const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
+const authMiddleware= require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -29,39 +30,9 @@ const upload = multer({
   },
 });
 
-// Middleware to verify admin role (not used for meat-options or menu-items)
-const verifyAdmin = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'No token provided' });
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 // Login
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const user = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (!user.rows.length) return res.status(404).json({ error: 'User not found' });
 
-    const validPassword = await bcrypt.compare(password, user.rows[0].password);
-    if (!validPassword) return res.status(401).json({ error: 'Invalid password' });
-
-    const token = jwt.sign({ id: user.rows[0].id, role: user.rows[0].role }, process.env.JWT_SECRET);
-    res.json({ token });
-  } catch (error) {
-    console.error('Error logging in:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Get all orders
 router.get('/orders', async (req, res) => {
@@ -406,7 +377,7 @@ router.delete('/menu-items/:id', async (req, res) => {
   }
 });
 
-router.get('/sales/income', async (req, res) => {
+router.get('/sales/income',  async (req, res) => {
   const { start_date, end_date } = req.query;
   try {
     const query = `
