@@ -406,7 +406,108 @@ router.delete('/menu-items/:id', async (req, res) => {
   }
 });
 
+router.get('/sales/income', async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try {
+    const query = `
+      SELECT COALESCE(SUM(CAST((item->>'price') AS FLOAT) * CAST((item->>'count') AS INTEGER)), 0) as total_income
+      FROM orders o, jsonb_array_elements(o.items) as item
+      WHERE o.status = 'Paid'
+      AND o.created_at BETWEEN $1 AND $2
+    `;
+    const result = await pool.query(query, [start_date, end_date]);
+    console.log('Fetched total income:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching income:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/sales/popular-items', async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try {
+    const query = `
+      SELECT item->>'name' as item_name, SUM(CAST((item->>'count') AS INTEGER)) as total_ordered
+      FROM orders o, jsonb_array_elements(o.items) as item
+      WHERE o.status = 'Paid'
+      AND o.created_at BETWEEN $1 AND $2
+      GROUP BY item->>'name'
+      ORDER BY total_ordered DESC
+      LIMIT 10
+    `;
+    const result = await pool.query(query, [start_date, end_date]);
+    console.log('Fetched popular items:', result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching popular items:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+router.get('/sales/order-types', async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try {
+    const query = `
+      SELECT COALESCE(o.order_type, 'Dine-in') as order_type, COUNT(*) as order_count
+      FROM orders o
+      WHERE o.status = 'Paid'
+      AND o.created_at BETWEEN $1 AND $2
+      GROUP BY o.order_type
+    `;
+    const result = await pool.query(query, [start_date, end_date]);
+    console.log('Fetched order types:', result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching order types:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/sales/popular-meats', async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try {
+    const query = `
+      SELECT option as meat_name, COUNT(*) as total_ordered
+      FROM orders o, jsonb_array_elements(o.items) as item, jsonb_array_elements_text(item->'options') as option
+      WHERE o.status = 'Paid'
+      AND o.created_at BETWEEN $1 AND $2
+      GROUP BY option
+      ORDER BY total_ordered DESC
+    `;
+    const result = await pool.query(query, [start_date, end_date]);
+    console.log('Fetched popular meats:', result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching popular meats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/sales/trends', async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try {
+    const query = `
+      SELECT DATE(o.created_at) as sale_date, 
+             COALESCE(SUM(CAST((item->>'price') AS FLOAT) * CAST((item->>'count') AS INTEGER)), 0) as daily_income
+      FROM orders o, jsonb_array_elements(o.items) as item
+      WHERE o.status = 'Paid'
+      AND o.created_at BETWEEN $1 AND $2
+      GROUP BY DATE(o.created_at)
+      ORDER BY sale_date
+    `;
+    const result = await pool.query(query, [start_date, end_date]);
+    console.log('Fetched sales trends:', result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching sales trends:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
+
 // const express = require('express');
 // const router = express.Router();
 // const pool = require('../db');
