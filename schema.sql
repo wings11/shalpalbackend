@@ -55,7 +55,7 @@ CREATE TABLE public.orders (
     staff_name VARCHAR(255),
     payment_method VARCHAR(100),
     completed_at TIMESTAMP,
-    CONSTRAINT orders_status_check CHECK (status IN ('Pending', 'Confirmed', 'Paid', 'Cancelled')),
+    CONSTRAINT orders_status_check CHECK (status IN ('New', 'Confirmed', 'Paid', 'Cancelled')),
     FOREIGN KEY (table_id) REFERENCES public.tables(id),
     FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
