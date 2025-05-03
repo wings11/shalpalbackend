@@ -535,4 +535,67 @@ router.get('/sales/trends', async (req, res) => {
   }
 });
 
+router.post('/orders', async (req, res) => {
+  const { table_id, items, notes } = req.body;
+  if (!table_id || !items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Table ID and items are required' });
+  }
+  try {
+    // Validate table_id and get table_number
+    const tableResult = await pool.query('SELECT id, table_number FROM tables WHERE id = $1', [table_id]);
+    if (tableResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Table not found' });
+    }
+    const tableNumber = tableResult.rows[0].table_number;
+
+    // Determine order_type based on table_number
+    let order_type;
+    if (tableNumber.toLowerCase() === 'take-away') {
+      order_type = 'Take-away';
+    } else if (tableNumber.toLowerCase() === 'delivery') {
+      order_type = 'Delivery';
+    } else {
+      order_type = 'Dine-in';
+    }
+
+    // Validate items and meat options
+    for (const item of items) {
+      const menuItem = await pool.query('SELECT id, name, price FROM menu_items WHERE id = $1', [item.id]);
+      if (menuItem.rows.length === 0) {
+        return res.status(404).json({ error: `Menu item with ID ${item.id} not found` });
+      }
+      if (!item.count || item.count < 1) {
+        return res.status(400).json({ error: `Invalid quantity for item ${item.id}` });
+      }
+      if (item.options && item.options.length > 0) {
+        for (const option of item.options) {
+          const meatOption = await pool.query(`
+            SELECT mo.name
+            FROM meat_options mo
+            JOIN menu_item_meat_options mimo ON mo.id = mimo.meat_option_id
+            WHERE mo.name = $1 AND mimo.menu_item_id = $2
+          `, [option, item.id]);
+          if (meatOption.rows.length === 0) {
+            return res.status(400).json({ error: `Invalid meat option '${option}' for item ${item.id}` });
+          }
+        }
+      }
+    }
+
+    // Create order
+    const result = await pool.query(
+      `INSERT INTO orders (table_id, items, notes, status, order_type, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
+      [table_id, JSON.stringify(items), notes || '', 'In Process', order_type]
+    );
+
+    console.log(`Created order for table ${tableNumber} with order_type ${order_type}`);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 module.exports = router;
