@@ -50,64 +50,7 @@ router.get('/orders', async (req, res) => {
   }
 });
 
-router.get('/orders/stream', async (req, res) => {
-  // Custom authentication for SSE
-  const token = req.query.token?.split(' ')[1];
-  if (!token) {
-    console.log('No token provided for SSE');
-    return res.status(401).json({ message: 'No token provided' });
-  }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!['Admin', 'Staff'].includes(decoded.role)) {
-      console.log('Access denied for SSE:', decoded.role);
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    console.log('SSE authenticated for user:', decoded.id, decoded.role);
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
-    const sentOrderIds = new Set();
-    const checkNewOrders = async () => {
-      try {
-        const result = await pool.query(`
-          SELECT o.id, o.items, o.notes, o.status, o.created_at, t.table_number
-          FROM orders o
-          JOIN tables t ON o.table_id = t.id
-          WHERE o.status = 'New'
-          AND o.created_at > NOW() - INTERVAL '1 minute'
-        `);
-        const newOrders = result.rows.filter(order => !sentOrderIds.has(order.id));
-        if (newOrders.length > 0) {
-          console.log('Sending orders:', newOrders.map(o => o.id));
-          newOrders.forEach(order => {
-            res.write(`data: ${JSON.stringify(order)}\n\n`);
-            sentOrderIds.add(order.id);
-          });
-        } else {
-          console.log('No new orders to send');
-        }
-      } catch (error) {
-        console.error('Error streaming orders:', error);
-      }
-    };
-
-    const interval = setInterval(checkNewOrders, 5000);
-    req.on('close', () => {
-      console.log('SSE client disconnected');
-      clearInterval(interval);
-      res.end();
-    });
-  } catch (error) {
-    console.log('Invalid token for SSE:', error.message);
-    res.status(401).json({ message: 'Invalid token' });
-  }
-});
 
 
 // Get order history
