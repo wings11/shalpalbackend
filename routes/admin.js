@@ -1,13 +1,13 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
-const authMiddleware= require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const supabase = require('../supabase'); // Import Supabase client
 
 // File upload setup
 const storage = multer.diskStorage({
@@ -30,7 +30,8 @@ const upload = multer({
   },
 });
 
-
+// Serve static files (optional, for local testing)
+router.use('/Uploads', express.static(path.join(__dirname, '../Uploads')));
 
 // Get all orders
 router.get('/orders', async (req, res) => {
@@ -49,9 +50,6 @@ router.get('/orders', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-
-
 
 // Get order history
 router.get('/orderhistory', async (req, res) => {
@@ -254,13 +252,36 @@ router.get('/menu-items', async (req, res) => {
   }
 });
 
-router.post('/menu-items', upload.single('image'), async (req, res) => {
-  const { name, price, description, category, meats } = req.body;
-  const image = req.file ? `/Uploads/${req.file.filename}` : '';
-  if (!name || !price) {
-    return res.status(400).json({ error: 'Name and price are required' });
-  }
+router.post('/menu-items', upload.single('imageFile'), async (req, res) => {
+  const { name, price, description, category, meats, imageUrl } = req.body;
+  let image = '';
+
   try {
+    // Handle image: prioritize file upload, then URL
+    if (req.file) {
+      // Upload to Supabase Storage
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const { data, error } = await supabase.storage
+        .from('menu-images')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+        });
+
+      if (error) {
+        throw new Error(`Supabase upload failed: ${error.message}`);
+      }
+
+      // Get public URL
+      image = `${process.env.SUPABASE_URL}/storage/v1/object/public/menu-images/${fileName}`;
+    } else if (imageUrl) {
+      // Use provided URL
+      image = imageUrl;
+    }
+
+    if (!name || !price) {
+      return res.status(400).json({ error: 'Name and price are required' });
+    }
+
     // Insert into menu_items
     const itemResult = await pool.query(
       'INSERT INTO menu_items (name, price, description, category, image) VALUES ($1, $2, $3, $4, $5) RETURNING *',
@@ -303,14 +324,41 @@ router.post('/menu-items', upload.single('image'), async (req, res) => {
   }
 });
 
-router.put('/menu-items/:id', upload.single('image'), async (req, res) => {
+router.put('/menu-items/:id', upload.single('imageFile'), async (req, res) => {
   const { id } = req.params;
-  const { name, price, description, category, meats } = req.body;
-  const image = req.file ? `/Uploads/${req.file.filename}` : req.body.image;
-  if (!name || !price) {
-    return res.status(400).json({ error: 'Name and price are required' });
-  }
+  const { name, price, description, category, meats, imageUrl } = req.body;
+  let image = '';
+
   try {
+    // Handle image: prioritize file upload, then URL, then existing image
+    if (req.file) {
+      // Upload to Supabase Storage
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const { data, error } = await supabase.storage
+        .from('menu-images')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+        });
+
+      if (error) {
+        throw new Error(`Supabase upload failed: ${error.message}`);
+      }
+
+      // Get public URL
+      image = `${process.env.SUPABASE_URL}/storage/v1/object/public/menu-images/${fileName}`;
+    } else if (imageUrl) {
+      // Use provided URL
+      image = imageUrl;
+    } else {
+      // Keep existing image
+      const existingItem = await pool.query('SELECT image FROM menu_items WHERE id = $1', [id]);
+      image = existingItem.rows[0]?.image || '';
+    }
+
+    if (!name || !price) {
+      return res.status(400).json({ error: 'Name and price are required' });
+    }
+
     // Update menu_items
     const itemResult = await pool.query(
       'UPDATE menu_items SET name = $1, price = $2, description = $3, category = $4, image = $5 WHERE id = $6 RETURNING *',
@@ -378,7 +426,7 @@ router.delete('/menu-items/:id', async (req, res) => {
   }
 });
 
-router.get('/sales/income',  async (req, res) => {
+router.get('/sales/income', async (req, res) => {
   const { start_date, end_date } = req.query;
   try {
     const query = `
@@ -417,7 +465,6 @@ router.get('/sales/popular-items', async (req, res) => {
   }
 });
 
-
 router.get('/sales/order-types', async (req, res) => {
   const { start_date, end_date } = req.query;
   try {
@@ -432,7 +479,7 @@ router.get('/sales/order-types', async (req, res) => {
     console.log('Fetched order types:', result.rows);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching order types:', error);
+    console.error('Error fetching popular meats:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -539,6 +586,5 @@ router.post('/orders', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 module.exports = router;
