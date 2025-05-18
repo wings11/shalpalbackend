@@ -166,7 +166,7 @@ router.get('/qr/:tableNumber', async (req, res) => {
 // Update order status
 router.put('/orders/:id/status', async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, staff_name, payment_method } = req.body;
   console.log(`PUT /api/admin/orders/${id}/status called with status: ${status}`);
   if (!['New', 'In Process', 'Paid', 'Cancelled'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
@@ -177,12 +177,68 @@ router.put('/orders/:id/status', async (req, res) => {
       [status, id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
+
+    // If status is Paid, insert into orderhistory
+    if (status === 'Paid') {
+      const order = result.rows[0];
+      await pool.query(
+        `INSERT INTO orderhistory (table_id, items, notes, status, created_at, order_type, staff_name, payment_method, completed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        [
+          order.table_id,
+          order.items,
+          order.notes,
+          status,
+          order.created_at,
+          order.order_type,
+          staff_name || null,
+          payment_method || null,
+        ]
+      );
+      console.log(`Inserted order ${id} into orderhistory`);
+    }
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating status:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
+// Get completed orders (grouped by table and completion event)
+router.get('/completed-orders', async (req, res) => {
+  try {
+    console.log('GET /api/admin/completed-orders called');
+    const result = await pool.query(`
+      SELECT 
+        oh.table_id,
+        t.table_number,
+        oh.order_type,
+        oh.staff_name,
+        oh.payment_method,
+        oh.completed_at,
+        jsonb_agg(oh.items) as items,
+        SUM(
+          (SELECT SUM(CAST((item->>'price') AS FLOAT) * CAST((item->>'count') AS INTEGER))
+           FROM jsonb_array_elements(oh.items) as item)
+        ) as total_amount
+      FROM orderhistory oh
+      JOIN tables t ON oh.table_id = t.id
+      WHERE oh.status = 'Paid'
+      GROUP BY oh.table_id, t.table_number, oh.order_type, oh.staff_name, oh.payment_method, oh.completed_at
+      ORDER BY oh.completed_at DESC
+    `);
+    res.json(result.rows.map(row => ({
+      ...row,
+      items: row.items.reduce((acc, items) => [...acc, ...items], []), // Flatten items
+      total_amount: parseFloat(row.total_amount).toFixed(2),
+    })));
+  } catch (error) {
+    console.error('Error fetching completed orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Cancel order
 router.delete('/orders/:id', async (req, res) => {
